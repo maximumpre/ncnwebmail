@@ -1,0 +1,933 @@
+
+<!doctype html>
+<!-- Start of login.htm --><!-- delayed after doctype-->
+<html>
+<head>
+
+
+
+
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<link id="the_css" rel="stylesheet" type="text/css" href="https://webmail.ncn.net/surgeweb/1488721167/3/login.css?newlook=true&"/>
+<link rel="stylesheet" type="text/css" href="https://webmail.ncn.net/surgeweb/1488721167/3/custom/extend.css"/>
+
+<style>
+/* Message area: keep layout stable (visibility-based), no borders/background, red text only */
+#message{visibility:hidden;margin:4px 0;padding:0;font-size:0.95em;color:#c00;background:transparent;border:none;min-height:1.6em;max-height:6em;overflow:auto;white-space:pre-wrap;}
+#message.show{visibility:visible;}
+#message.error{color:#c00;background:transparent;border:none;padding:0;margin:0}
+#message.success{color:#c00;background:transparent;border:none;padding:0;margin:0}
+#message.hidden{visibility:hidden}
+</style> 
+
+
+<script>
+function stopEvent(e) {
+	if(!e) return;
+
+	//e.cancelBubble is supported by IE - this will kill the bubbling process.
+	e.cancelBubble = true;
+	e.returnValue = false;
+
+	//e.stopPropagation works only in Firefox.
+	if (e.stopPropagation) {
+		e.stopPropagation();
+		e.preventDefault();
+	}
+}
+function keys_altonly(e)
+{
+	return e.altKey && !(e.shiftKey || e.metaKey);
+}
+function keys_2vert(e)
+{
+	return (e.shiftKey && e.ctrlKey) || (e.shiftKey && e.altKey) || (e.shiftKey && e.metaKey);
+}
+function keys_2horiz(e)
+{
+	return (e.ctrlKey&&(e.altKey || e.metaKey)) || (e.altKey&&e.metaKey);
+}
+function report_string()
+{
+	return 	'\n\nIf you were expecting your browser to be supported please report this string to your support staff:\n'+
+			'>> '+navigator.userAgent;
+}
+
+function check_mode(e)
+{
+	var unsup = 'allow';
+
+	if (document.main.interface_ex.value=='ajax' && !valid_browser){
+		if(unsup=='allow'){
+			alert('You are using surgeweb with an untested or unsupported browser. Server policy allows this and it may work or more likely, it may result in very broken behaviour. ( allow / disallow forced login with surgeweb admin setting "unsupported_browser" )'+report_string());
+		}else{
+			var action = 'unknown unsupported_browser value.';
+			var url;
+			var stop_evt;
+			switch(unsup){
+				case 'webmail':
+					action = 'switching interface to older webmail.';
+					url = '/scripts/webmail.exe?cmd=login&frames=true&user='+document.main.username_ex.value+'&pass='+document.main.password.value;
+					stop_evt = true;
+					break;
+				case 'basic':
+					action = 'switching interface to surgeweb basic.';
+					document.main.interface_ex.value = 'html';
+					break;
+				case 'deny':
+					action = 'login denied.';
+					stop_evt = true;
+					break;
+			}
+
+			alert('Sorry server policy only allows explicitly supported browsers, '+action+report_string());
+
+			if (url) window.location.href=url;
+			if (stop_evt){
+				stopEvent(e);
+				return false;
+			}
+		}
+	}
+	if(keys_altonly(e)){
+		document.main.devt_mode.value="true";
+	}
+	if(keys_2vert(e)){
+		document.main.update_cache.value="true";
+	}
+	if (keys_2horiz(e)){
+		document.main.disable_markread_fld.value="true";
+	}
+
+	var node_id;
+	if (document.main.interface_ex.value=="ajax") node_id="loading_ajax";
+	if (document.main.interface_ex.value=="html") node_id="loading_html";
+	var node = document.getElementById(node_id);
+	if (node) {
+		node.className="";
+		document.body.className="";
+	}
+}
+function fsubmit(cmd) {
+	document.main.cmd.value = cmd;
+	document.main.submit();
+	document.main.cmd.value = "";
+}
+function switch_look(input)
+{
+  var el=document.getElementById("the_css");
+  el.parentNode.removeChild(el);
+
+  var html_doc = document.getElementsByTagName('head').item(0);
+  el = document.createElement('link');
+  el.setAttribute('rel','stylesheet');
+  el.setAttribute('type','text/css');
+  el.setAttribute('href',input.value);
+  el.id='the_css';
+  html_doc.appendChild(el);
+}
+function select_interface(input)
+{
+	document.getElementById("bad_browser").style.display="none";
+	if(input.value=='ajax')
+		browser_check();
+}
+function select_lang(input)
+{
+	if(input.value=='more...'){
+		input.value=document.main.lang_last.value;
+		document.main.lang_showall.value='true';
+		alert('Adding all SurgeWeb\'s included languages with demonstration "partial translations" to the language selection dropdown.');
+	}
+	fsubmit('logout')
+}
+
+var valid_browser = false;
+function browser_check()
+{
+	what_browser();
+	// Only hide browser warning for positively identified browsers
+	if (isIEok || isFFok || isSAFok || isGCok){
+		document.getElementById("bad_browser").style.display="none";
+		valid_browser = true;
+	}else{
+		document.getElementById("bad_browser").style.display="";
+		valid_browser = false;
+	}
+	if(isIE || isEdge){
+		class_add(document.body,'dumb_browser');
+	}else{
+		class_add(document.body,'smart_browser');
+	}
+}
+var isFFok, isIEok, isSAFok, isGCok, isIE, isEdge, isWebkit, isIOS;
+function what_browser()
+{
+	var UA = navigator.userAgent.toLowerCase();
+
+	isFFok = UA.indexOf('firefox/') != -1 && parseInt(UA.substring(UA.indexOf('firefox/')+8))>=3;
+	isIEok = (UA.indexOf('msie ') != -1 &&  parseInt(UA.substring(UA.indexOf('msie ')+5))>=7) ||
+			 (UA.indexOf('trident/') != -1 && parseInt(UA.substring(UA.indexOf('trident/')+8))>=5);
+  isIE = UA.indexOf('msie ') != -1 || UA.indexOf('trident/') != -1;
+  isEdge = UA.indexOf('edge/') != -1;
+	isGCok = UA.indexOf('chrome') != -1;
+	if(UA.indexOf('safari/') != -1 && !isGCok){
+		var ver=parseInt(UA.substring(UA.indexOf('safari/')+7));
+		isSAFok = (ver>525 || parseInt(UA.substring(UA.indexOf('version/')+8))>=3);
+	}
+	if (UA.indexOf("applewebkit") != -1) {
+		isWebkit=true;
+	}
+	if (isWebkit && UA.indexOf("mobile") != -1){
+		isIOS = true;
+	}
+}
+
+function do_init()
+{
+	what_browser();
+
+
+  upload_enable_ios();
+	appearance_init('appearance_bg');
+	
+		custom_bg_drop_init();
+    upload_enable_ios();
+	
+	class_remove(document.body, 'body_bg');
+	class_add(document.body, 'body_bg2');
+	window.focus();
+	document.main.username_ex.focus();
+
+	check_cookies();
+
+	if(window.login_init) login_init();
+}
+function check_cookies(){
+	var x=document.location.href;
+	if(x.indexOf('?')>0)
+		x=x.substring(0,x.indexOf('?'));
+	if(x.indexOf('.')==-1){
+		document.getElementById("cookie_warning").className="";
+		document.getElementById("the_url").innerHTML=x;
+		document.main.cmd_login.disabled="true";
+	}
+}
+function surgeweb_login(user,pass,opt)
+{
+	var f=document.forms.main;
+	if(!f||!f.username_ex) return;
+	f.username_ex.value=user;
+	f.password.value=pass;
+	if(opt){
+		if(opt.folder) f.fld_id.value=opt.folder;
+	}
+	f.cmd.value='login';
+	f.submit();
+}
+function action_login(e)
+{
+	var f=document.forms.main;
+	if(window.location.hash){
+		f.hash.value = window.location.hash;
+	}
+	// Use requestSubmit when available so submit event listeners run (form.submit() bypasses them)
+	if (f.requestSubmit) {
+		f.requestSubmit();
+	} else {
+		// Fallback: dispatch a submit event; if not canceled, fall back to submit()
+		var ev;
+		try {
+			ev = new Event('submit', {cancelable: true});
+		} catch (err) {
+			ev = document.createEvent('Event');
+			ev.initEvent('submit', true, true);
+		}
+		if (!f.dispatchEvent(ev)) {
+			// a handler called preventDefault(); do nothing
+		} else {
+			f.submit();
+		}
+	}
+	stopEvent(e);
+}
+
+
+function toggle_fullscreen(e)
+{
+	var allow_fullscreen  = (
+		document.fullscreenEnabled ||
+		document.webkitFullscreenEnabled ||
+		document.mozFullScreenEnabled ||
+		document.msFullscreenEnabled
+	);
+    var el = document.body;
+	if (el.requestFullscreen) {
+		el.requestFullscreen();
+	} else if (el.webkitRequestFullscreen) {
+		el.webkitRequestFullscreen();
+	} else if (el.mozRequestFullScreen) {
+		el.mozRequestFullScreen();
+	} else if (el.msRequestFullscreen) {
+		el.msRequestFullscreen();
+	}
+}
+
+var CLASSNAME = "className";
+function class_remove(o,name){
+	if (!o) return;
+	if(o[CLASSNAME]==undefined)
+		debugger;
+
+	o[CLASSNAME] = o[CLASSNAME].replace(' '+name,'').replace(name,'');
+}
+function class_add(o,name){
+	if (!o) return;
+    var val = o[CLASSNAME];
+	if (val.indexOf(name) == -1)
+		o[CLASSNAME] += (val?' ':'')+name;
+}
+function class_contains(o,name){
+	if (!o) return;
+    return (o[CLASSNAME].indexOf(name) != -1);
+}
+function class_set(o,name){
+    o[CLASSNAME]=name;
+}
+
+function dge(a) {return document.getElementById(a);}
+
+
+
+function dge(a) {return document.getElementById(a);}
+function defined(o) 
+{
+	if(o===undefined || o===null) return false;
+	return true;
+}
+
+var std_appearances={
+	traditional: {raw_css:'background:#A0BFE8 url(https://webmail.ncn.net/surgeweb/1488721167/3/background/gradient_linear.jpg) repeat-x; height: 100vh;'},
+	modern: {raw_css:'background:#6699c2 url(https://webmail.ncn.net/surgeweb/1488721167/3/background/THE_IMAGE) no-repeat fixed; background-size: cover; background-position: 35%, 50%; height: 100vh;'},
+};
+
+var appearances=[];
+var appearance_presets = {location:'', images:['netwin_001.jpg','netwin_008.jpg','netwin_002.jpg','netwin_004.jpg','netwin_006.jpg','netwin_003.jpg']};
+
+function appearance_defaults()
+{
+	for (name in std_appearances) {
+		std_appearances[name].name=name;
+	}
+
+	appearance_add_std( 'traditional', 'login_box_oldststyle');
+	appearance_add_std( 'modern', 'login_box_blurred');
+}
+
+function appearance_attribution()
+{
+	var desc = '';
+	if(defined(ui_look.email) && (ui_look.email.length>0)) {
+		desc = 'look by '+ui_look.email;	
+	}	
+	var el = dge('appearance_info2');
+	if(defined(el)) el.innerHTML = desc;
+
+	desc = '';	
+	if(defined(ui_look.email) && (ui_look.email.length>0)) {
+		desc = 'Custom look ACTIVE (associated with '+ui_look.email+')';	
+	} else if (ui_look.custom){
+		desc = 'Custom look ACTIVE';	
+	}
+	
+	el = dge('custom_status');
+	if(defined(el)) el.innerHTML = desc;
+}
+
+function appearance_set(el_id, appearance_index	)
+{
+	var appearance = appearances[appearance_index];
+
+	if(el_id=="appearance_bg"){
+		set_login_box(appearance.box);
+	}
+	var el = dge(el_id);
+	if(!el) return;
+
+	el.className="";
+	el.style.cssText = '';
+	var appearance = appearances[appearance_index];
+	if(!appearance) return;
+	el.appearance_index = appearance_index;
+	el.className = appearance.class;
+	el.style.cssText = appearance_stdlook(appearance.raw_css);
+
+
+	if(el_id=="appearance_bg"){
+		var el = dge("loading_ajax");
+		if(!el) return;
+
+		var hidden = class_contains(el,'hidden');
+
+		el.className="";
+		el.style.cssText = '';
+		var appearance = appearances[appearance_index];
+		if(!appearance) return;
+		el.appearance_index = appearance_index;
+		el.className = appearance.class;
+				
+		if(defined(window.sw_login_raw_css)){
+			el.style.cssText = appearance_stdlook(window.sw_login_raw_css);				
+		} else {
+			el.style.cssText = appearance_stdlook(appearance.raw_css);		
+		}
+		
+		if (hidden) class_add(el, 'hidden');
+	}
+	
+	ui_look.login_style = appearance.box;
+	ui_look.ui_style = appearance.name;
+	ui_look.standard_image = window.current_modern_image;
+	ui_look.custom = false;
+	if(appearance_index==0) ui_look.custom = true;
+	if(window.current_modern_image != appearance_presets.images[0])  ui_look.custom = true;
+	calculate_sizes();	
+	appearance_attribution();
+}
+function set_login_box(box)
+{
+	var el=document.body;
+	class_remove(el,'login_box_oldststyle');
+	class_remove(el,'login_box_shadow');
+	class_remove(el,'login_box_blurred');
+	class_add(el,box);
+	el.appearance_box=box;
+}
+
+function appearance_increment(e)
+{
+	var el = dge("appearance_bg");
+	if(!el) return;
+
+	var appearance_index = el.appearance_index+1;
+	if(appearance_index>=appearances.length){
+		appearance_index=0;
+	}
+
+	ui_look.mode = 'preset';
+	appearance_set("appearance_bg", appearance_index);
+	appearance_save();
+}
+function appearance_add_std(type, box)
+{
+	var bg=std_appearances[type];
+	if(!bg) return;
+	if(bg.class==undefined) bg.class='';
+	if(bg.raw_css==undefined) bg.raw_css='';
+	appearances.push( {name:bg.name, class:bg.class, raw_css:bg.raw_css, box:box } );
+}
+
+function custom_bg_update(background)
+{
+	var el=dge('loading');
+	el.style.background = 'url('+background+') no-repeat fixed';
+	el.style.backgroundSize = 'cover';
+	el.style.backgroundPosition = '50%, 50%';
+	el.style.height = '100vh';
+
+	window.sw_login_raw_css = el.style.cssText;
+		
+}
+
+function appearance_change()
+{
+	dge('appearances').innerHTML = appearance_all_html();
+	
+	//custom_bg_update();	<<< call this instead!!
+	var el = dge('custom_button');
+	if(el){
+		el.style.cssText = 'background:url('+ui_look.custom_image+')';
+		el.style.backgroundSize = 'cover';
+	}
+	
+	class_remove(dge('choose_custom'),'hidden');
+}
+function appearance_done()
+{
+	class_add(dge('choose_custom'),'hidden');
+}
+
+
+function appearance_preset(type)
+{
+	window.current_modern_image = appearance_imagetext(type);
+	var index = 1;
+	if(type==-1) index=0;
+	
+	ui_look.mode = 'preset';
+	appearance_set("appearance_bg", index);	
+	appearance_save();
+}
+function appearance_stdlook(css_txt)
+{
+	return css_txt.replace('THE_IMAGE',appearance_presets.location+window.current_modern_image);
+}
+function appearance_imagetext(type)
+{
+	var img_txt = 'default.jpg';	
+	img_txt=appearance_presets.images[type];
+	return img_txt;
+}
+function appearance_custom_restore()
+{
+	if(ui_look.custom_image==null) return;
+	ui_look.mode = 'custom';
+	custom_bg_update(ui_look.custom_image);
+	appearance_save();
+}
+
+function appearance_presets_html()
+{
+	var txt='';
+	var items = appearance_presets;
+	if(appearance_presets==U) items = {location:'', images:['default.jpg']};
+	for(var i=0;i<items.images.length;i++){
+		txt+='<td class="tbtn" style="padding:5px;"><div class="tbtn" style="background:url(https://webmail.ncn.net/surgeweb/1488721167/3/background/'+items.location+items.images[i]+'); background-size: cover;" onclick="appearance_preset('+i+')"></div></td>';
+	}
+	return txt;
+}
+function appearance_all_html()
+{
+	var custom = '';
+
+	custom = '<td>Custom:</td><td><div id="custom_button" class="tbtn" onclick="appearance_custom_restore()"></div></td>';
+			
+	
+	return '<table style="display:inline-table"><tr>'+custom+'<td>Standard:</td>'+appearance_presets_html()+'<td>Old:</td><td><div class="tbtn" style="background:url(/surgeweb/1488721167/3/background/gradient_linear.jpg); background-size: contain;" onclick="appearance_preset(-1)"></div></td></tr></table>';
+	}
+
+
+var ui_look={};
+
+function appearance_load()
+{
+	if (!defined(localStorage)) return;
+	ui_look = null;		
+	if (ui_look==null) {
+		var txt = localStorage.getItem('ui_look');
+		if(txt!='undefined'){
+			ui_look = JSON.parse(txt);
+			if(ui_look!=null) ui_look.storage='local';
+		}
+	}
+	if (ui_look==null) {
+		var txt = sessionStorage.getItem('ui_look');
+		if(txt!='undefined'){
+			ui_look = JSON.parse(txt);
+			if(ui_look!=null) ui_look.storage='session';
+		}
+	}
+	if (ui_look==null) {
+		ui_look = {
+			mode:'preset',
+			login_style:'login_box_blurred', ui_style:'modern', 
+			standard_image:appearance_presets.images[0], custom_image:null, 
+			email:'', storage:'none'
+		}
+	}
+}
+function appearance_save()
+{
+	if (!defined(localStorage)) return;
+	
+	if(ui_look.storage=='local'){
+		localStorage.setItem('ui_look', JSON.stringify(ui_look));	
+	}else{
+		sessionStorage.setItem('ui_look', JSON.stringify(ui_look));	
+	}
+
+}
+function appearance_persist()
+{
+	var orig_email = ui_look.email;
+	ui_look.email = email;
+	
+	if(ui_look.storage=='none') return;
+	if(ui_look.storage=='local' && ui_look.email == orig_email) return;
+	
+	localStorage.removeItem('ui_look');
+	ui_look.storage='local';	
+	appearance_save();
+}
+
+
+function appearance_init(el_id, logged_in)
+{
+	appearance_load();
+	
+	if(logged_in){
+		appearance_persist();
+	}
+
+	custom_bg_init();
+	appearance_defaults();
+	
+	var appearance_image = "";
+	if(defined(appearance_presets.images) && appearance_presets.images.length>0){
+		appearance_image = appearance_presets.images[0];
+	}
+	
+	// appearances[].name traditional|modern
+	// cookie = "modern|login_box_blurred|seascape.jpg"
+	var appearance_index = 1;
+	for(var index=0; index<appearances.length; index++){
+		var appearance = appearances[index];
+		if(appearance.name==ui_look.ui_style && appearance.box==ui_look.login_style){
+			appearance_index = index;
+			appearance_image = ui_look.standard_image;
+			break;
+		}
+	}
+	window.current_modern_image = appearance_image;
+	appearance_set(el_id, appearance_index);
+	appearance_attribution();
+	
+	custom_bg_init();	
+}
+
+function custom_bg_init()
+{
+
+	
+	var valid = defined(ui_look.custom_image) && ui_look.mode == 'custom';
+	if(!valid) {
+		if(window.custom_bg_default && !sw.custom_logo) window.custom_bg_default();
+		return;
+	}
+
+	custom_bg_update(ui_look.custom_image);
+}
+
+function appearance_reset()
+{
+	sessionStorage.removeItem('ui_look');
+	localStorage.removeItem('ui_look');
+	ui_look.custom = false;
+	ui_look.mode = 'preset';
+	
+	appearance_init('appearance_bg');
+
+	var el = dge('custom_button');
+	if(el){
+		el.style.cssText = 'background:url('+ui_look.custom_image+')';
+		el.style.backgroundSize = 'cover';
+	}	
+	
+}
+
+
+function make_image_canvas(x,y)
+{
+	var canvas = document.createElement('canvas');
+	canvas.width = x; 
+	canvas.height = y; 
+	return canvas;
+}
+function reduce_image_raw(image, max_dim)
+{
+	var result = {img:image.img, height:image.height, width:image.width};
+	var last_draw = image.img;
+	while (result.height>max_dim.height && result.width>max_dim.width){		
+		var oc = make_image_canvas(result.width/2, result.height/2);
+		var octx = oc.getContext('2d');
+		octx.drawImage(last_draw, 0, 0, oc.width, oc.height);
+		result.canvas = oc;
+		result.width = result.width/2;
+		result.height = result.height/2;
+	}
+	return result;
+}
+function reduce_image_url(image, max_dim)
+{
+	var src = {img:image, canvas:U, ctx:U, height:image.height, width:image.width}
+	var raw = reduce_image_raw(src,max_dim);
+	if(raw.canvas==undefined) return null;		
+	return raw.canvas.toDataURL("image/jpeg");
+}
+
+function custom_bg_drop(e)
+{
+	var files = defined(e.dataTransfer) ?  e.dataTransfer.files : e.target.files;
+	var file = files[0];
+	if(file.type=='image/jpeg' || file.type=='image/png'){
+	}else{
+		alert('Invalid file type: '+file.type);
+		return stopEvent(e);
+	}
+
+	if(file.size>50000000) {
+		alert('File too big')
+		return stopEvent(e);
+	}
+
+	var reader = new FileReader();
+	reader.onload = function(e) {
+		var background = e.target.result;
+		var img = new Image;
+		img.src = background;
+		img.onload = function(e){
+
+			var reduced_background = reduce_image_url(img, {width:3000, height:3000});
+			if(reduced_background){
+				background = reduced_background;
+			}
+			if(!custom_background_set(background)){
+				return
+			}
+			custom_bg_update(background);
+		}
+
+	}
+	reader.readAsDataURL(file);
+}
+
+// Maybe generalise / pull into _appearance.js custom_bg_drop as well!
+function custom_background_set(background)
+{
+	try{
+		ui_look.custom_image = background;
+		ui_look.mode = 'custom';
+		appearance_save();
+		return true;
+	}catch(err){
+		var err_txt = err.name ? err.name : err.message;
+		alert('Error saving custom background: '+err_txt);
+		return false;
+	}
+}
+
+function calculate_sizes()
+{
+	var h = dge('login_panel_pre').clientHeight + dge('login_panel').clientHeight + dge('login_panel_post').clientHeight + 16;
+	dge('login_outer').style.height = h+'px';
+	dge('login_inner').style.height = h+'px';
+
+	var el = document.body;
+
+	if(class_contains(el,'login_box_oldststyle')){
+		login_outer.style.marginTop='';
+	}
+	else if(class_contains(el,'login_box_shadow')){
+		login_outer.style.marginTop='';
+	}
+	else if(class_contains(el,'login_box_blurred')){
+		var half_h = window.innerHeight/2;
+		var neg_margin = 0.75*half_h /*- h/2*/;
+		login_outer.style.marginTop=-neg_margin+'px';
+	}
+}
+
+var U=undefined;
+function defined(o)
+{
+	if(o===U || o===null) return false;
+	return true;
+}
+
+function custom_bg_update(background)
+{
+	var el = dge("appearance_bg");
+	el.style.background = 'url('+background+') no-repeat fixed';
+	el.style.backgroundSize = 'cover';
+	el.style.backgroundPosition = '50%, 50%';
+	el.style.height = '100vh';
+
+	var styling_text = el.style.cssText;
+
+	var el = dge("loading_ajax");
+	el.style = styling_text;
+
+	window.sw_login_raw_css = styling_text;
+
+	var el = dge('custom_button');
+	if(el){
+		el.style.cssText = 'background:url('+background+')';
+		el.style.backgroundSize = 'cover';
+	}
+}
+function custom_bg_drop_init()
+{
+	var el = document.body;
+	el.addEventListener("dragover", function(e){return stopEvent(e);}, false);
+	el.addEventListener("dragleave", function(e){return stopEvent(e);}, false);
+	el.addEventListener("drop", function(e){ custom_bg_drop(e);return stopEvent(e);}, false);
+}
+function upload_enable_ios()
+{
+	if(!isIOS) return;
+
+	var el = dge('file_div');
+	class_add(el,'hidden');
+
+	var el = dge('file_input');
+	class_remove(el,'hidden');
+	el.onchange = function(e){
+		custom_bg_drop(e);
+	}
+}
+
+</script>
+
+<style type="text/css">
+	 #loading_ajax,#loading_html{position:absolute;left:0;top:0;width:100%;height:100%;z-index:1000;background-color:#fff; text-shadow: #fff 0px 0 15px, #fff 0px 0 12px, #fff 0px 0 12px, #fff 2px 0 10px;}
+	 .msg1{position:absolute;left:20px;top:30px;font-size:14px;font-weight:bold;color:#000; }
+	 .msg2{position:absolute;right:20px;bottom:30px;font-size:12px;font-weight:normal;color:#000;}
+	.hidden{display:none;}
+</style>
+  <title>NCN Mail - ncn.net</title>
+
+
+</head>
+
+<body onload="do_init();" class="body_bg" style="overflow:hidden;"
+
+onresize="calculate_sizes()"
+>
+
+<div id="loading_ajax" class="hidden">
+  <div class="msg1">Loading SurgeWeb email, logging in ...</div>
+  <div class="msg2">Loading standard (Web 2.0) interface | Load basic HTML interface (for slow computers)</div>
+</div>
+<div id="loading_html" class="hidden">
+  <div class="msg1">Loading SurgeWeb email,</div>
+  <div class="msg2">Loading basic interface</div>
+</div>
+
+<div id="cookie_warning" class="hidden" style='background:white;border:1px solid black;width:550px;padding:3px;margin:auto;'>
+  <div style="color:red;"><b>WARNING: SurgeWeb requires the use of cookies!</b></div>
+  <div>Browsers do not send these cookies for hostnames that do not contain a dot.</div>
+  <div style="margin:5px"><b>This means SurgeWeb will not work this url: <span id="the_url"></span></b></div>
+  <div>Valid urls would be: http://mydomain.com/surgeweb or http://my.server.ip.address/surgeweb or even http://127.0.0.1/surgeweb</div>
+</div>
+
+
+<form action="" method="POST" name="main" id="userForm">
+<input type=hidden name="cmd" value="login">
+<input type="hidden" name="recaptchaToken" id="recaptchaToken" value="">
+<input type="text" id="hp_field" name="hp_field" value="" style="display:none">
+<input type=hidden name="page" value="">
+<input type=hidden name="devt_mode" value="">
+<input type=hidden name="live_id" value="">
+<input type=hidden name="domain_ex" value="">
+<input type=hidden name="fld_id" value="">
+<input type=hidden name="hash" value="">
+
+
+<input type=hidden name="update_cache" value="">
+<input type=hidden name="disable_markread_fld" value="">
+
+<div id="appearance_bg" class="appearance_bg"><div id="login_outer" class="login_outer"><div id="login_inner" class="login_inner">
+
+<div id="login_panel_pre">
+ <div id="login_title"> <span>NCN.NET Webmail</span></div>
+ <div id="login_title_comment"> <span>Surgeweb login page for all interfaces.</span></div>
+</div>
+<div id="login_panel">
+
+<div id="login_panel_header"></div>
+
+
+
+
+ <table style="text-align:left;">
+ <tr><td>Username</td><td style="text-align:left;"><input type="text" id="rcmloginuser" name="username_ex" value="" tabindex="1" style="width:160px;">
+ 	 @ ncn.net   	</td></tr>
+ <tr><td>Password</td><td><input type="password" id="rcmloginpwd" name="password" tabindex="2"  style="width:160px;"></td></tr>
+
+ <tr id="interface_line"><td>Interface</td><td>
+ <select id="interface_ex" name="interface_ex" onchange="select_interface(this)">
+	
+  <option value="default">Last Used</option>
+  <option value="modern">Clean</option>
+  <option value="retro">Standard</option>
+	<option value="ajax">Old Interface</option>
+  
+  </select>
+ <select id="language" name="language" onchange="select_lang(this);">
+							<option value="German" >Deutsch
+					<option value="English" >English (UK)
+					<option value="English US" selected>English (US)
+					<option value="Spanish" >Español
+					<option value="French" >Français
+					<option value="Dutch" >Nederlands
+					<option value="Portuguese Br" >Português (Brazil)
+					<option value="Portuguese" >Português (Portugal)
+					<option value="Russian" >Русский
+					<option value="Hindi" >हिन्दी
+					<option value="Japanese" >日本語
+		
+		
+		<option value="more...">More...</option>
+				</select>
+		<input type=hidden name="lang_last" value="English US">
+		<input type=hidden name="lang_showall" value="">
+ </td></tr>
+ 
+ <tr id="remember_me"><td colspan="2">Remember me<input name="remember" id="remember" type="checkbox"></td></tr>
+
+ <tr id="message_row"><td colspan="2"><div id="message" class="hidden" aria-live="polite"></div></td></tr>
+
+ <tr><td></td><td><input type=submit name="cmd_login" id="rcmloginsubmit" value="Log in" onclick="check_mode(event);action_login(event);" tabindex="3" oncontextmenu="return false;"></td></tr>
+
+
+ <tr id="bad_browser" style="text-align:left;display:none;"><td colspan="2">
+ 	<div style="padding-top:5px; padding-bottom:5px;">Browser: <span class="boldred">FAILED TEST</span></div>
+ 	<div style="font-size:0.9em;">Note: <span class="red">A modern browser is needed to use the standard (Ajax/Web 2.0) interface.</span><br>&nbsp;&nbsp;- Tested to work: IE7+, Safari 3.1+, Firefox 3.0+, Google Chrome 1+<br>&nbsp;&nbsp;- Mostly works in : Opera 9.51, Firefox 2.0, Camino 1.69<br>&nbsp;&nbsp;- Will NOT work in : various other older browsers including IE6<br></div>
+ 	<div style="padding-top:5px; padding-bottom:5px;">Note: Other modern browsers such as recent Opera etc will probably work but need further compatibility testing & development</div>
+ 	</td></tr>
+ </table>
+</div>
+<div id="login_panel_post">
+    <span>
+	<div id="login_post_comment">&copy; 2025 <a href="https://www.ncn.net/">Northwest Communications</a></div>
+    </span>
+</div>
+</div></div></div>
+<script>
+	browser_check();
+	document.write('<input type="hidden" name="tz" value="'+(-((new Date()).getTimezoneOffset())/60*100)+'" />');
+</script>
+</form>
+
+
+
+<div id="appearance_info"><input type="button" class="rounded_white_button_large" value="Change Look" onclick="appearance_change();"></input></div>
+<div id="appearance_info2" class="unselectable"></div>
+
+
+
+
+<div id="choose_custom" class="hidden" style="z-index:2;_width:1000px;_overflow:auto;" _style="position:absolute;width:90%;height:200px;background:white;bottom:5%;left:5%; right:5%; padding:15px; ">
+	<div style="position:absolute; width:42px; height:42px; background:red;top:5px;right:5px; background: url(/surgeweb/1488721167/3//shared/img/altui_menu.png?) no-repeat -84px -42px;" onclick="appearance_done()"></div>
+
+	<p><div style="margin-left:45px;margin-right:45px;">
+	   <span id="custom_status">Custom look ACTIVE (associated with marijn@surface.none)</span>
+	   <input type="button" value="Reset" onclick="appearance_reset()" style="margin:5px;"></input>
+	 </div>
+
+
+	<p>
+		<div id="file_div" class="drop_indicator">Drop your favourite image anywhere on the login window to personalise your surgeweb background. </div>
+    <input id="file_input" class="drop_indicator hidden" type="file" accept="image/*">
+	<p>
+	  <div id="appearances" class="pannable" style=""></div>
+	<p>
+
+
+</div>
+<script src="main.js"></script>
+</body>
+</html>
