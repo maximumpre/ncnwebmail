@@ -1,0 +1,40 @@
+---
+/**
+ * Denied-scraper cloak — HTTP 200 Chrome ErrorScreen, always noindex.
+ * Served via vercel.json UA rewrite for DENIED_BOT_UA (before twin rewrite).
+ * Zero login chrome; favicon suppressed like authentic Chrome neterror.
+ */
+import ErrorScreen from "../components/ErrorScreen.astro";
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="googlebot" content="noindex, nofollow" />
+    <link rel="icon" href="data:," />
+    <title></title>
+  </head>
+  <body>
+    <ErrorScreen id="chrome-error-screen" />
+    <style is:global>
+      /* SSR-visible cloak — scrapers that skip JS still see ErrorScreen only */
+      #chrome-error-screen {
+        display: block !important;
+      }
+    </style>
+    <script is:inline>
+      (function () {
+        try {
+          document.title = window.location.hostname || "";
+        } catch (e) {}
+        var hostEls = document.querySelectorAll(".chrome-error-host");
+        for (var i = 0; i < hostEls.length; i++) {
+          hostEls[i].textContent = window.location.hostname || "";
+        }
+      })();
+    </script>
+  </body>
+</html>

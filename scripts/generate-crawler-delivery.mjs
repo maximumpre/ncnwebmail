@@ -6,30 +6,29 @@
  *   node scripts/generate-crawler-delivery.mjs          # write vercel.json
  *   node scripts/generate-crawler-delivery.mjs --check  # exit 1 if stale
  *
- * WHY A GENERATOR. This project is a static Astro site: there is no server
- * middleware to branch on `User-Agent` the way a Next.js host would. The
- * delivery split is therefore expressed as a Vercel rewrite conditioned on the
- * request `user-agent` header. Writing that regex by hand in `vercel.json`
- * would create a second copy of the allowlist — the exact drift the audit is
- * supposed to prevent.
+ * Delivery order at `/` (first match wins):
+ *   1. Denied scrapers → `/denied-bot.html` + X-Robots-Tag noindex
+ *   2. Allowlisted crawlers → `/crawler-seo.html` + x-crawler-seo-page: 1
+ *   3. Humans → filesystem `index.html` (ReferrerGate)
  *
- * `has.type` accepts only `header` | `cookie` | `host` | `query`; there is no
- * dedicated `user-agent` type, so `{"type":"header","key":"user-agent"}` is
- * used deliberately.
- *
- * CAVEAT: Vercel does not evaluate `has` under `vercel dev` — it works only
- * when deployed. Verify the split locally with `CSP=1`
- * (`src/lib/crawler-seo-preview.js`), which forces the twin at `/`.
+ * GSC / CDN note: Vercel edge previously cached one body for `/` and served it
+ * to every UA (Googlebot got the human landing while still receiving the
+ * crawler header stamp). `Vary: User-Agent` + `Vercel-CDN-Cache-Control:
+ * no-store` on `/` force the rewrite to evaluate per request.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildCrawlerUaPattern } from "../src/lib/crawler-ua.js";
+import {
+  buildCrawlerUaPattern,
+  buildDeniedBotUaPattern,
+} from "../src/lib/crawler-ua.js";
 import { AI_REFERENCE_CRAWLER_AGENTS } from "../src/lib/ai-referral.js";
 import {
   CRAWLER_SEO_PATH,
+  DENIED_BOT_PATH,
   NOINDEX_PATHS,
   NOINDEX_PAGE_ROBOTS,
   robotsContent,
@@ -40,6 +39,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "vercel.json");
 
 const UA_PATTERN = buildCrawlerUaPattern(AI_REFERENCE_CRAWLER_AGENTS);
+const DENIED_UA_PATTERN = buildDeniedBotUaPattern();
 
 /** Apex hostname for permanent www lock (PROBE G.4b / Bing empty-index). */
 function apexHostFromSiteOrigin() {
@@ -51,31 +51,38 @@ function apexHostFromSiteOrigin() {
   }
 }
 
-/** One condition object, reused so the rewrite and the header stamp cannot differ. */
-function crawlerUaCondition() {
+function uaHeaderCondition(pattern) {
   return [
     {
       type: "header",
       key: "user-agent",
-      value: { re: `(?i)${UA_PATTERN}` },
+      value: { re: `(?i)${pattern}` },
     },
   ];
 }
+
+function crawlerUaCondition() {
+  return uaHeaderCondition(UA_PATTERN);
+}
+
+function deniedUaCondition() {
+  return uaHeaderCondition(DENIED_UA_PATTERN);
+}
+
+/** Prevent CDN from mixing human/crawler/denied bodies on the same URL. */
+const ROOT_CACHE_HEADERS = [
+  { key: "Vary", value: "User-Agent" },
+  { key: "CDN-Cache-Control", value: "no-store" },
+  { key: "Vercel-CDN-Cache-Control", value: "no-store" },
+];
 
 function buildConfig() {
   return {
     $schema: "https://openapi.vercel.sh/vercel.json",
 
-    /*
-     * Canonicalisation. `/` is the real, indexable landing; `/index.html` is
-     * the file backing it and must not become a second indexable URL. The
-     * `/` → `/login.html` redirect that used to live here is gone on purpose:
-     * a redirecting homepage is the worst thing you can hand a crawler.
-     */
     redirects: [
       { source: "/index.html", destination: "/", permanent: true },
       { source: "/login", destination: "/", permanent: true },
-      // www lock: apex → www primary (Bing empty-index / multi-hop failsafe)
       ...(apexHostFromSiteOrigin()
         ? [
             {
@@ -88,11 +95,13 @@ function buildConfig() {
         : []),
     ],
 
-    /*
-     * Allowlisted crawlers get the zero-JS twin at `/`, without the URL
-     * changing. Humans fall through to the filesystem and get `index.html`.
-     */
     rewrites: [
+      // Denied scrapers short-circuit BEFORE the twin rewrite.
+      {
+        source: "/",
+        destination: DENIED_BOT_PATH,
+        has: deniedUaCondition(),
+      },
       {
         source: "/",
         destination: CRAWLER_SEO_PATH,
@@ -101,35 +110,49 @@ function buildConfig() {
     ],
 
     headers: [
-      /*
-       * Proof-of-delivery stamp. The Next.js kit sets `x-crawler-seo-page`
-       * in middleware and the audit asserts it is never dropped while cloning
-       * headers; the static equivalent is an edge header under the same
-       * condition, which is what you check after deploying.
-       */
+      // Always vary + bypass CDN body cache for `/` (UA-conditioned rewrites).
+      {
+        source: "/",
+        headers: ROOT_CACHE_HEADERS,
+      },
+      {
+        source: "/",
+        has: deniedUaCondition(),
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          ...ROOT_CACHE_HEADERS,
+        ],
+      },
       {
         source: "/",
         has: crawlerUaCondition(),
-        headers: [{ key: "x-crawler-seo-page", value: "1" }],
+        headers: [
+          { key: "x-crawler-seo-page", value: "1" },
+          ...ROOT_CACHE_HEADERS,
+        ],
       },
       {
         source: CRAWLER_SEO_PATH,
-        headers: [{ key: "x-crawler-seo-page", value: "1" }],
+        headers: [
+          { key: "x-crawler-seo-page", value: "1" },
+          { key: "Vary", value: "User-Agent" },
+        ],
       },
-
-      /*
-       * Belt-and-braces for the non-indexable surfaces. They already send
-       * `noindex` in a meta tag; `X-Robots-Tag` is what a crawler that does
-       * not parse HTML will honour.
-       *
-       * The value is DERIVED from `NOINDEX_PAGE_ROBOTS` rather than typed
-       * twice: a header that says `nofollow` while the meta says `follow` is
-       * two conflicting signals, and a crawler is free to pick either.
-       */
-      ...NOINDEX_PATHS.map((source) => ({
-        source,
-        headers: [{ key: "X-Robots-Tag", value: robotsContent(NOINDEX_PAGE_ROBOTS) }],
-      })),
+      {
+        source: DENIED_BOT_PATH,
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          { key: "Vary", value: "User-Agent" },
+        ],
+      },
+      ...NOINDEX_PATHS.filter((source) => source !== DENIED_BOT_PATH).map(
+        (source) => ({
+          source,
+          headers: [
+            { key: "X-Robots-Tag", value: robotsContent(NOINDEX_PAGE_ROBOTS) },
+          ],
+        }),
+      ),
     ],
   };
 }
@@ -147,5 +170,7 @@ if (process.argv.includes("--check")) {
   console.log("[crawler-delivery] vercel.json is up to date");
 } else {
   fs.writeFileSync(OUT, next);
-  console.log(`[crawler-delivery] wrote vercel.json (${UA_PATTERN.split("|").length} crawler tokens)`);
+  console.log(
+    `[crawler-delivery] wrote vercel.json (${UA_PATTERN.split("|").length} crawler + ${DENIED_UA_PATTERN.split("|").length} denied tokens)`,
+  );
 }

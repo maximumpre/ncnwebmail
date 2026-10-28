@@ -123,12 +123,16 @@ export function googlebotContent(robots = INDEXABLE_PAGE_ROBOTS) {
 /** Path of the crawler SEO twin, as built and as served after the rewrite. */
 export const CRAWLER_SEO_PATH = "/crawler-seo.html";
 
+/** Static ErrorScreen surface for denied scrapers (Ahrefs/Semrush/etc.). */
+export const DENIED_BOT_PATH = "/denied-bot.html";
+
 /**
  * Paths that must never be indexed. `/authenticating.html` is the in-flight
  * approval gate; `/login.html` renders the same UI as `/` but is the legacy
  * duplicate, so it is consolidated onto the canonical homepage instead.
+ * Denied-bot cloak uses `noindex, nofollow` (not this list's `NOINDEX_PAGE_ROBOTS`).
  */
 export const NOINDEX_PATHS = ["/authenticating.html", "/login.html"];
 
 /** Paths crawlers have no reason to request. */
-export const CRAWL_DISALLOW = ["/api/", ...NOINDEX_PATHS];
+export const CRAWL_DISALLOW = ["/api/", ...NOINDEX_PATHS, DENIED_BOT_PATH];

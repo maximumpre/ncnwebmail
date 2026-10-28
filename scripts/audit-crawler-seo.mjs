@@ -389,27 +389,57 @@ for (const token of ["meta-externalfetcher", "snapchat"]) {
 section("7. Crawler delivery (vercel.json)");
 
 assert(vercel !== null, "vercel.json parses");
-const rootRewrite = (vercel?.rewrites ?? []).find((r) => r.source === "/");
-assert(Boolean(rootRewrite), "a rewrite is mounted at /");
+const rootRewrites = (vercel?.rewrites ?? []).filter((r) => r.source === "/");
+assert(rootRewrites.length >= 2, "denied + twin rewrites mounted at /", String(rootRewrites.length));
+
+const deniedRewrite = rootRewrites.find(
+  (r) => r.destination === siteConfig.DENIED_BOT_PATH,
+);
+const rootRewrite = rootRewrites.find(
+  (r) => r.destination === siteConfig.CRAWLER_SEO_PATH,
+);
+assert(Boolean(deniedRewrite), "denied-bot rewrite is mounted at /");
+assert(Boolean(rootRewrite), "twin rewrite is mounted at /");
+assert(
+  rootRewrites.indexOf(deniedRewrite) < rootRewrites.indexOf(rootRewrite),
+  "denied-bot rewrite runs before twin rewrite",
+);
 assert(
   rootRewrite?.destination === siteConfig.CRAWLER_SEO_PATH,
-  "the rewrite targets the built twin",
+  "the twin rewrite targets the built twin",
   rootRewrite?.destination,
 );
 const cond = rootRewrite?.has?.[0];
-assert(cond?.type === "header", "the rewrite condition is a request header", cond?.type);
+assert(cond?.type === "header", "the twin rewrite condition is a request header", cond?.type);
 assert(
   String(cond?.key).toLowerCase() === "user-agent",
-  "the rewrite conditions on user-agent",
+  "the twin rewrite conditions on user-agent",
   cond?.key,
 );
 assert(
   typeof cond?.value?.re === "string" && cond.value.re.includes("googlebot"),
-  "the rewrite regex is a real UA pattern",
+  "the twin rewrite regex is a real UA pattern",
 );
 assert(
   (rootRewrite?.has?.[0]?.value?.re ?? "").includes("chatgpt-user"),
-  "the rewrite includes AI reference crawlers",
+  "the twin rewrite includes AI reference crawlers",
+);
+
+const deniedCond = deniedRewrite?.has?.[0];
+assert(deniedCond?.type === "header", "denied rewrite conditions on a header");
+assert(
+  String(deniedCond?.key).toLowerCase() === "user-agent",
+  "denied rewrite conditions on user-agent",
+);
+const expectedDenied = `(?i)${crawlerUa.buildDeniedBotUaPattern()}`;
+assert(
+  deniedCond?.value?.re === expectedDenied,
+  "vercel.json matches the generated denied-bot pattern",
+  deniedCond?.value?.re,
+);
+assert(
+  /ahrefs/i.test(deniedCond?.value?.re ?? ""),
+  "denied rewrite includes AhrefsBot tokens",
 );
 
 // The whole point of the generator: the deployed regex must equal the one the
@@ -426,7 +456,44 @@ const stamp = (vercel?.headers ?? []).find(
 assert(Boolean(stamp), "x-crawler-seo-page is stamped on crawler responses at /");
 assert(
   JSON.stringify(stamp?.has?.[0]) === JSON.stringify(cond),
-  "the header stamp and the rewrite use the identical condition",
+  "the crawler header stamp and the twin rewrite use the identical condition",
+);
+
+const deniedStamp = (vercel?.headers ?? []).find(
+  (h) =>
+    h.source === "/" &&
+    h.has &&
+    h.headers?.some((x) => x.key.toLowerCase() === "x-robots-tag"),
+);
+assert(Boolean(deniedStamp), "denied bots get X-Robots-Tag noindex on /");
+assert(
+  /noindex/i.test(
+    deniedStamp?.headers?.find((x) => x.key.toLowerCase() === "x-robots-tag")?.value ?? "",
+  ),
+  "denied X-Robots-Tag includes noindex",
+);
+
+const rootVary = (vercel?.headers ?? []).find(
+  (h) =>
+    h.source === "/" &&
+    !h.has &&
+    h.headers?.some((x) => x.key.toLowerCase() === "vary"),
+);
+assert(Boolean(rootVary), "root `/` sends Vary: User-Agent (GSC/CDN split)");
+assert(
+  rootVary?.headers?.some(
+    (x) =>
+      x.key.toLowerCase() === "vary" && /user-agent/i.test(String(x.value)),
+  ),
+  "Vary includes User-Agent",
+);
+assert(
+  rootVary?.headers?.some(
+    (x) =>
+      x.key.toLowerCase() === "vercel-cdn-cache-control" &&
+      /no-store/i.test(String(x.value)),
+  ),
+  "Vercel-CDN-Cache-Control: no-store on `/` (prevents human-body cache poison)",
 );
 
 // The old `/` → `/login.html` redirect must not come back.

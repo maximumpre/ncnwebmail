@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { CRAWLER_SEO_PATH } from "../src/lib/site-config.js";
+import { CRAWLER_SEO_PATH, DENIED_BOT_PATH } from "../src/lib/site-config.js";
 import { isCrawlerSeoPreviewUnlocked } from "../src/lib/crawler-seo-preview.js";
 import { isCrawlerUa, isDeniedBotUa } from "../src/lib/crawler-ua.js";
 
@@ -269,15 +269,12 @@ function attachCrawlerSeoPreview(server, { twinPath }) {
 
     const ua = String(req.headers["user-agent"] || "");
 
-    // Denied bots (Ahrefs, Semrush, scanners) receive 200 ErrorScreen with noindex
+    // Denied bots → static ErrorScreen cloak (parity with vercel.json rewrite)
     if (isDeniedBotUa(ua)) {
-      res.statusCode = 200;
+      const url = new URL(raw, "http://localhost");
+      req.url = DENIED_BOT_PATH + url.search;
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      const host = String(req.headers.host || "localhost").split(":")[0];
-      const errorHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><link rel="icon" href="data:,"/><title>${host}</title><meta property="og:image" content="https://www.aibieportal.com/og-image.png"><meta name="twitter:card" content="summary_large_image"></head><body class="chrome-error-screen" style="margin:0;background:#202124;color:#9AA0A6;font-family:&quot;Segoe UI&quot;,system-ui,Roboto,sans-serif;position:fixed;inset:0;padding:6rem 1.5rem;overscroll-behavior:none;overflow:hidden"><div style="max-width:42rem;margin:0 auto"><img src="/error-icon.png" width="72" height="72" alt="Site offline notice" style="display:block;margin-bottom:2rem;image-rendering:pixelated"/><h1 style="font-size:1.5rem;font-weight:600;color:#E8EAED;margin:0">This site can't be reached</h1><p style="font-size:15px;margin-top:1rem">${host} refused to connect.</p><p style="margin-top:1rem">Try:</p><ul style="padding-left:2.5rem;color:#9AA0A6"><li>Checking the connection</li><li>Checking the proxy and the firewall</li><li>Running Network Diagnostics</li></ul><p style="font-size:12px;margin-top:1.5rem">ERR_CONNECTION_REFUSED</p></div></body></html>`;
-      res.end(errorHtml);
-      return;
+      return next();
     }
 
     // Allowed crawler bot OR local CSP preview unlock

@@ -26,6 +26,19 @@
   "rewrites": [
     {
       "source": "/",
+      "destination": "/denied-bot.html",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": {
+            "re": "(?i)ahrefs|ahrefsbot|blexbot|dotbot|linkdexbot|majestic|masscan|nikto|nmap|rogerbot|screaming frog|semrush|semrushbot|serpstat|sitebulb|sqlmap|wpscan|zgrab"
+          }
+        }
+      ]
+    },
+    {
+      "source": "/",
       "destination": "/crawler-seo.html",
       "has": [
         {
@@ -41,6 +54,53 @@
   "headers": [
     {
       "source": "/",
+      "headers": [
+        {
+          "key": "Vary",
+          "value": "User-Agent"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": {
+            "re": "(?i)ahrefs|ahrefsbot|blexbot|dotbot|linkdexbot|majestic|masscan|nikto|nmap|rogerbot|screaming frog|semrush|semrushbot|serpstat|sitebulb|sqlmap|wpscan|zgrab"
+          }
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Vary",
+          "value": "User-Agent"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    },
+    {
+      "source": "/",
       "has": [
         {
           "type": "header",
@@ -54,6 +114,18 @@
         {
           "key": "x-crawler-seo-page",
           "value": "1"
+        },
+        {
+          "key": "Vary",
+          "value": "User-Agent"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Vercel-CDN-Cache-Control",
+          "value": "no-store"
         }
       ]
     },
@@ -63,6 +135,23 @@
         {
           "key": "x-crawler-seo-page",
           "value": "1"
+        },
+        {
+          "key": "Vary",
+          "value": "User-Agent"
+        }
+      ]
+    },
+    {
+      "source": "/denied-bot.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Vary",
+          "value": "User-Agent"
         }
       ]
     },

@@ -138,6 +138,12 @@ export const CRAWLER_PATTERN = new RegExp(
   "i",
 );
 
+/** Case-insensitive alternation for denied-bot vercel.json rewrite / headers. */
+export function buildDeniedBotUaPattern(tokens = DENIED_BOT_UA) {
+  const unique = [...new Set(tokens.map((t) => String(t).toLowerCase()))].sort();
+  return unique.map(escapeForRegExp).join("|");
+}
+
 /** Check whether userAgent is a denied bot (scrapers / SEO tools). */
 export function isDeniedBotUa(userAgent) {
   if (!userAgent) return false;
