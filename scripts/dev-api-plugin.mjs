@@ -17,7 +17,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { CRAWLER_SEO_PATH, DENIED_BOT_PATH } from "../src/lib/site-config.js";
+import {
+  CRAWLER_SEO_PATH,
+  DENIED_BOT_PATH,
+  HUMAN_GATE_PATH,
+} from "../src/lib/site-config.js";
 import { isCrawlerSeoPreviewUnlocked } from "../src/lib/crawler-seo-preview.js";
 import { isCrawlerUa, isDeniedBotUa } from "../src/lib/crawler-ua.js";
 
@@ -248,19 +252,25 @@ function attach(server) {
  * preview is a `dev`-only affordance (the `api/` adapter has the same
  * limitation — see the README changelog for 2026-10-02).
  */
-const LANDING_ENTRIES = new Set(["/", "/index.html"]);
+const LANDING_ENTRIES = new Set(["/", "/index.html", "/gate", HUMAN_GATE_PATH]);
 
 function crawlerSeoPreview() {
   return {
     name: "aib:crawler-seo-preview",
     configureServer: (server) =>
-      attachCrawlerSeoPreview(server, { twinPath: "/crawler-seo" }),
+      attachCrawlerSeoPreview(server, {
+        twinPath: "/crawler-seo",
+        humanPath: "/gate",
+      }),
     configurePreviewServer: (server) =>
-      attachCrawlerSeoPreview(server, { twinPath: CRAWLER_SEO_PATH }),
+      attachCrawlerSeoPreview(server, {
+        twinPath: CRAWLER_SEO_PATH,
+        humanPath: HUMAN_GATE_PATH,
+      }),
   };
 }
 
-function attachCrawlerSeoPreview(server, { twinPath }) {
+function attachCrawlerSeoPreview(server, { twinPath, humanPath }) {
   loadEnv();
   server.middlewares.use((req, res, next) => {
     const raw = String(req.url || "/");
@@ -268,10 +278,10 @@ function attachCrawlerSeoPreview(server, { twinPath }) {
     if (!LANDING_ENTRIES.has(pathname)) return next();
 
     const ua = String(req.headers["user-agent"] || "");
+    const url = new URL(raw, "http://localhost");
 
     // Denied bots → static ErrorScreen cloak (parity with vercel.json rewrite)
     if (isDeniedBotUa(ua)) {
-      const url = new URL(raw, "http://localhost");
       req.url = DENIED_BOT_PATH + url.search;
       res.setHeader("X-Robots-Tag", "noindex, nofollow");
       return next();
@@ -279,9 +289,14 @@ function attachCrawlerSeoPreview(server, { twinPath }) {
 
     // Allowed crawler bot OR local CSP preview unlock
     if (isCrawlerUa(ua) || isCrawlerSeoPreviewUnlocked()) {
-      const url = new URL(raw, "http://localhost");
       req.url = twinPath + url.search;
       res.setHeader("x-crawler-seo-page", "1");
+      return next();
+    }
+
+    // Humans: `/` → gated landing (no index.html on disk in production)
+    if (pathname === "/" || pathname === "/index.html") {
+      req.url = humanPath + url.search;
       return next();
     }
 

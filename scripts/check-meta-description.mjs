@@ -38,12 +38,14 @@ function assert(condition, msg, detail) {
   }
 }
 
-const INDEXABLE = ["index.html", "crawler-seo.html"];
+// Human body for `/` is gate.html (not index.html — Vercel filesystem vs UA rewrite).
+const INDEXABLE = ["crawler-seo.html"];
+const HUMAN_LANDING = "gate.html";
 const NON_INDEXABLE = ["login.html", "authenticating.html", "404.html"];
 
 console.log("meta description + title parity\n");
 
-for (const file of [...INDEXABLE, ...NON_INDEXABLE]) {
+for (const file of [...INDEXABLE, HUMAN_LANDING, ...NON_INDEXABLE]) {
   const p = path.join(DIST, file);
   if (!fs.existsSync(p)) {
     assert(false, `${file} exists in dist/`);
@@ -76,7 +78,7 @@ for (const file of [...INDEXABLE, ...NON_INDEXABLE]) {
   assert(!/https?:\/\//i.test(desc), `${file}: no URL in the description`, desc);
 
   const robots = html.match(/<meta name="robots" content="([^"]*)"/)?.[1] ?? "";
-  if (INDEXABLE.includes(file)) {
+  if (INDEXABLE.includes(file) || file === HUMAN_LANDING) {
     assert(
       robots === "index, follow",
       `${file}: indexable with \`index, follow\``,
@@ -120,12 +122,12 @@ const canonical = (file) =>
   fs.readFileSync(path.join(DIST, file), "utf8").match(/<link rel="canonical" href="([^"]*)"/)?.[1];
 
 assert(
-  canonical("index.html") === siteConfig.SITE_HOMEPAGE_CANONICAL,
-  "index.html canonical is the homepage canonical",
-  canonical("index.html"),
+  canonical(HUMAN_LANDING) === siteConfig.SITE_HOMEPAGE_CANONICAL,
+  "gate.html canonical is the homepage canonical",
+  canonical(HUMAN_LANDING),
 );
 assert(
-  canonical("crawler-seo.html") === canonical("index.html"),
+  canonical("crawler-seo.html") === canonical(HUMAN_LANDING),
   "crawler twin canonical matches the landing (no competing URL)",
   canonical("crawler-seo.html"),
 );

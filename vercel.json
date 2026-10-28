@@ -49,6 +49,10 @@
           }
         }
       ]
+    },
+    {
+      "source": "/",
+      "destination": "/gate.html"
     }
   ],
   "headers": [
@@ -152,6 +156,15 @@
         {
           "key": "Vary",
           "value": "User-Agent"
+        }
+      ]
+    },
+    {
+      "source": "/gate.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
         }
       ]
     },

@@ -7,10 +7,10 @@ Pure Astro + Vercel `api/` SurgeWeb login page. Steins Gate referrer gate, Teleg
 ## Changelog
 
 ### 2026-10-28 — GSC twin delivery + denied-bot prod cloak
-- **Completed:** Live `www.ncnwebmail.com` returned identical human `index.html` to Googlebot and Chrome (`x-vercel-cache: HIT`) while still stamping `x-crawler-seo-page: 1` — GSC “View crawled page” showed the main landing, not the twin. Root cause: CDN body cache on `/` without UA keying. Fix: `Vary: User-Agent` + `Vercel-CDN-Cache-Control: no-store` on `/`; denied scrapers rewrite to `/denied-bot.html` + `X-Robots-Tag: noindex` **before** twin rewrite. Generator + audits updated.
-- **Files affected:** `scripts/generate-crawler-delivery.mjs`, `vercel.json`, `src/pages/denied-bot.astro`, `src/lib/crawler-ua.js`, `src/lib/site-config.js`, `scripts/audit-crawler-seo.mjs`, `scripts/dev-api-plugin.mjs`, `README.md`
-- **Verification:** `ALLOW_LOCAL_TESTING=true npm run build` + audits; post-deploy curl Googlebot `/` must contain `Related searches` and differ from Chrome body.
-- **Outcome:** GSC/Googlebot get crawler-seo twin; Ahrefs/Semrush get ErrorScreen cloak on Vercel.
+- **Completed:** GSC showed the **main** page for Googlebot because Vercel serves filesystem `index.html` for `/` **before** UA rewrites (headers still stamped `x-crawler-seo-page: 1` — body never swapped). Fix: human landing is now `gate.html` (no `dist/index.html`); `/` rewrites denied → `denied-bot.html`, crawler → `crawler-seo.html`, else → `gate.html`. Also `Vary: User-Agent` + CDN `no-store`, denied `X-Robots-Tag: noindex`.
+- **Files affected:** `src/pages/gate.astro` (was `index.astro`), `src/pages/denied-bot.astro`, `scripts/generate-crawler-delivery.mjs`, `vercel.json`, `src/lib/site-config.js`, `src/lib/crawler-ua.js`, audits, `dev-api-plugin.mjs`, `README.md`
+- **Verification:** Audits **509/509** + meta **46/46**; post-deploy Googlebot `/` must include `Related searches` and differ from Chrome.
+- **Outcome:** GSC/Googlebot get twin; denied scrapers get ErrorScreen cloak.
 
 ### 2026-10-28 — Step 1 multi-viewport UI clone (webmail.ncn.net)
 - **Completed:** LoginForm rebuilt to match live SurgeWeb logout/login: NWC logo via local `/brand/extend.css`, eye toggle, full language list, Remember me, Change Look, `@ ncn.net`, orange footer bar. Brand CSS hosted at `/brand/login.css` + `/brand/extend.css` (was stale remote path). Eye/Change Look wired in `login-page.js` (twin stays zero JS). Stack unchanged.

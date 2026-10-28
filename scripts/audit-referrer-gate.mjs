@@ -73,11 +73,11 @@ if (!gate) {
   }
 }
 
-const indexPage = readIfExists(["src/pages/index.astro", "pages/index.astro"])
+const indexPage = readIfExists(["src/pages/gate.astro", "pages/gate.astro"])
 if (!indexPage) {
-  failures.push("missing src/pages/index.astro")
+  failures.push("missing src/pages/gate.astro")
 } else if (!/ReferrerGate/.test(indexPage.text)) {
-  failures.push("index.astro does not mount ReferrerGate")
+  failures.push("gate.astro does not mount ReferrerGate")
 }
 
 const twinPage = readIfExists(["src/pages/crawler-seo.astro", "pages/crawler-seo.astro"])

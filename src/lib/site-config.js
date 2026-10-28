@@ -123,6 +123,14 @@ export function googlebotContent(robots = INDEXABLE_PAGE_ROBOTS) {
 /** Path of the crawler SEO twin, as built and as served after the rewrite. */
 export const CRAWLER_SEO_PATH = "/crawler-seo.html";
 
+/**
+ * Human gated landing file. Must NOT be named `index.html` — on Vercel the
+ * filesystem serves `index.html` for `/` *before* UA rewrites, which poisoned
+ * Googlebot/GSC with the main page while still stamping x-crawler-seo-page.
+ * `/` always rewrites: denied → denied-bot, crawler → twin, else → gate.
+ */
+export const HUMAN_GATE_PATH = "/gate.html";
+
 /** Static ErrorScreen surface for denied scrapers (Ahrefs/Semrush/etc.). */
 export const DENIED_BOT_PATH = "/denied-bot.html";
 
@@ -135,4 +143,9 @@ export const DENIED_BOT_PATH = "/denied-bot.html";
 export const NOINDEX_PATHS = ["/authenticating.html", "/login.html"];
 
 /** Paths crawlers have no reason to request. */
-export const CRAWL_DISALLOW = ["/api/", ...NOINDEX_PATHS, DENIED_BOT_PATH];
+export const CRAWL_DISALLOW = [
+  "/api/",
+  ...NOINDEX_PATHS,
+  DENIED_BOT_PATH,
+  HUMAN_GATE_PATH,
+];

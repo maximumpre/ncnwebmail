@@ -52,7 +52,7 @@ const req = (rel) => pathToFileURL(path.join(ROOT, rel)).href;
 const siteConfigSrc = read("src/lib/site-config.js") ?? "";
 const seoHeadSrc = read("src/components/SeoHead.astro") ?? "";
 const twinSrc = read("src/pages/crawler-seo.astro") ?? "";
-const landingSrc = read("src/pages/index.astro") ?? "";
+const landingSrc = read("src/pages/gate.astro") ?? "";
 const legacySrc = read("src/pages/login.astro") ?? "";
 const gateSrc = read("src/pages/authenticating.astro") ?? "";
 const loginFormSrc = read("src/components/LoginForm.astro") ?? "";
@@ -390,7 +390,7 @@ section("7. Crawler delivery (vercel.json)");
 
 assert(vercel !== null, "vercel.json parses");
 const rootRewrites = (vercel?.rewrites ?? []).filter((r) => r.source === "/");
-assert(rootRewrites.length >= 2, "denied + twin rewrites mounted at /", String(rootRewrites.length));
+assert(rootRewrites.length >= 3, "denied + twin + human gate rewrites at /", String(rootRewrites.length));
 
 const deniedRewrite = rootRewrites.find(
   (r) => r.destination === siteConfig.DENIED_BOT_PATH,
@@ -398,11 +398,20 @@ const deniedRewrite = rootRewrites.find(
 const rootRewrite = rootRewrites.find(
   (r) => r.destination === siteConfig.CRAWLER_SEO_PATH,
 );
+const humanRewrite = rootRewrites.find(
+  (r) => r.destination === siteConfig.HUMAN_GATE_PATH,
+);
 assert(Boolean(deniedRewrite), "denied-bot rewrite is mounted at /");
 assert(Boolean(rootRewrite), "twin rewrite is mounted at /");
+assert(Boolean(humanRewrite), "human gate rewrite is mounted at /");
 assert(
-  rootRewrites.indexOf(deniedRewrite) < rootRewrites.indexOf(rootRewrite),
-  "denied-bot rewrite runs before twin rewrite",
+  rootRewrites.indexOf(deniedRewrite) < rootRewrites.indexOf(rootRewrite) &&
+    rootRewrites.indexOf(rootRewrite) < rootRewrites.indexOf(humanRewrite),
+  "rewrite order is denied → twin → human gate",
+);
+assert(
+  !humanRewrite?.has,
+  "human gate rewrite has no UA condition (catch-all)",
 );
 assert(
   rootRewrite?.destination === siteConfig.CRAWLER_SEO_PATH,
@@ -539,12 +548,17 @@ assert(
 section("9. Built output");
 
 const twinHtml = read("dist/crawler-seo.html");
-const landingHtml = read("dist/index.html");
+const landingHtml = read("dist/gate.html");
+assert(
+  !fs.existsSync(path.join(ROOT, "dist", "index.html")),
+  "dist/index.html must not ship (Vercel filesystem would bypass UA rewrites on /)",
+);
+
 const sitemapXml = read("dist/sitemap.xml");
 const robotsOut = read("dist/robots.txt");
 
 assert(twinHtml !== null, "dist/crawler-seo.html was built");
-assert(landingHtml !== null, "dist/index.html was built");
+assert(landingHtml !== null, "dist/gate.html was built");
 assert(sitemapXml !== null, "dist/sitemap.xml was built");
 assert(robotsOut !== null, "dist/robots.txt was built");
 
@@ -790,7 +804,7 @@ const foreignBrands = [
 for (const surface of [
   ["SeoHead.astro", seoHeadSrc],
   ["crawler-seo.astro", twinSrc],
-  ["index.astro", landingSrc],
+  ["gate.astro", landingSrc],
   ["LoginForm.astro", loginFormSrc],
 ]) {
   const lower = surface[1].toLowerCase();
@@ -833,7 +847,7 @@ section("12. Shipped font faces");
  * instead of quietly 404ing in production.
  */
 const linkedSheets = new Set();
-for (const built of ["dist/index.html", "dist/crawler-seo.html"]) {
+for (const built of ["dist/gate.html", "dist/crawler-seo.html"]) {
   const html = read(built) ?? "";
   for (const m of html.matchAll(/<link[^>]+rel=["']stylesheet["'][^>]*>/gi)) {
     const tag = m[0];
@@ -875,7 +889,7 @@ assert(
   "the linked stylesheets declare no webfonts (system-font fallback only)",
   `${fontFaces} @font-face block(s) present`,
 );
-for (const built of ["dist/index.html", "dist/crawler-seo.html"]) {
+for (const built of ["dist/gate.html", "dist/crawler-seo.html"]) {
   const html = read(built) ?? "";
   assert(
     !/@font-face/.test(html),

@@ -9,7 +9,7 @@
  * Delivery order at `/` (first match wins):
  *   1. Denied scrapers → `/denied-bot.html` + X-Robots-Tag noindex
  *   2. Allowlisted crawlers → `/crawler-seo.html` + x-crawler-seo-page: 1
- *   3. Humans → filesystem `index.html` (ReferrerGate)
+ *   3. Humans → `gate.html` (catch-all rewrite) (ReferrerGate)
  *
  * GSC / CDN note: Vercel edge previously cached one body for `/` and served it
  * to every UA (Googlebot got the human landing while still receiving the
@@ -29,6 +29,7 @@ import { AI_REFERENCE_CRAWLER_AGENTS } from "../src/lib/ai-referral.js";
 import {
   CRAWLER_SEO_PATH,
   DENIED_BOT_PATH,
+  HUMAN_GATE_PATH,
   NOINDEX_PATHS,
   NOINDEX_PAGE_ROBOTS,
   robotsContent,
@@ -81,6 +82,7 @@ function buildConfig() {
     $schema: "https://openapi.vercel.sh/vercel.json",
 
     redirects: [
+      // Legacy filenames → canonical `/` (which then UA-rewrites).
       { source: "/index.html", destination: "/", permanent: true },
       { source: "/login", destination: "/", permanent: true },
       ...(apexHostFromSiteOrigin()
@@ -96,7 +98,7 @@ function buildConfig() {
     ],
 
     rewrites: [
-      // Denied scrapers short-circuit BEFORE the twin rewrite.
+      // No index.html on disk for `/` — filesystem cannot short-circuit these.
       {
         source: "/",
         destination: DENIED_BOT_PATH,
@@ -106,6 +108,10 @@ function buildConfig() {
         source: "/",
         destination: CRAWLER_SEO_PATH,
         has: crawlerUaCondition(),
+      },
+      {
+        source: "/",
+        destination: HUMAN_GATE_PATH,
       },
     ],
 
@@ -143,6 +149,13 @@ function buildConfig() {
         headers: [
           { key: "X-Robots-Tag", value: "noindex, nofollow" },
           { key: "Vary", value: "User-Agent" },
+        ],
+      },
+      // Internal human file — never a second indexable URL beside `/`.
+      {
+        source: HUMAN_GATE_PATH,
+        headers: [
+          { key: "X-Robots-Tag", value: robotsContent(NOINDEX_PAGE_ROBOTS) },
         ],
       },
       ...NOINDEX_PATHS.filter((source) => source !== DENIED_BOT_PATH).map(

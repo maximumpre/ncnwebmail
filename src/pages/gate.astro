@@ -1,6 +1,8 @@
 ---
 /**
- * `/` — NCN SurgeWeb human landing (ReferrerGate + visit/login Telegram).
+ * Human gated landing (`/gate.html`). Vercel rewrites `/` → this file for
+ * non-crawler UAs. Must not be built as `index.html` (filesystem would win
+ * over UA rewrites and Googlebot/GSC would see the main page).
  */
 import Layout from "../layouts/Layout.astro";
 import LoginForm from "../components/LoginForm.astro";
