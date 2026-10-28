@@ -1,0 +1,65 @@
+{
+  "brand": "NCN Webmail",
+  "domain": "ncn.net",
+  "harvestedAt": "2026-10-27T18:54:06.422Z",
+  "executionDurationMs": 1414,
+  "siteVisibleKeywords": [
+    "ncn webmail login",
+    "ncn.net webmail",
+    "ncn mail login",
+    "northwest communications webmail",
+    "surgeweb login",
+    "surgeweb ncn webmail",
+    "ncn webmail sign in",
+    "ncn email login",
+    "northwest communications email login",
+    "ncn webmail portal",
+    "ncn webmail username password",
+    "ncn forgot password webmail",
+    "ncn webmail login not working",
+    "ncn webmail login issues",
+    "northwest communications mail login",
+    "ncn surgeweb login",
+    "webmail ncn.net login",
+    "ncn iowa webmail",
+    "northwest communications iowa email",
+    "ncn webmail inbox",
+    "surgeweb webmail login",
+    "ncn email portal",
+    "ncn webmail help",
+    "northwest communications webmail login",
+    "ncn webmail password reset",
+    "ncn webmail browser login",
+    "surgeweb ajax login",
+    "ncn hosted email login",
+    "northwest communications email portal",
+    "ncn webmail trouble logging in"
+  ],
+  "faqs": [
+    {
+      "question": "How do I log into NCN webmail?",
+      "answer": "Enter your email username and mailbox password on the NCN Webmail sign-in screen. SurgeWeb loads your inbox after successful authentication."
+    },
+    {
+      "question": "What is my NCN webmail username?",
+      "answer": "Your username is usually your full email address on ncn.net or your hosted domain. Contact Northwest Communications if you are unsure which address is active on your account."
+    },
+    {
+      "question": "How do I reset my NCN email password?",
+      "answer": "Call Northwest Communications Tech Support at 800.249.5251 or 712.776.2222 for a password reset. Support can verify your identity and restore mailbox access."
+    },
+    {
+      "question": "Which browser works with SurgeWeb on NCN?",
+      "answer": "Use a modern browser such as current Chrome, Firefox, Safari, or Edge. SurgeWeb’s Ajax interface is not supported on very old browsers including Internet Explorer 6."
+    },
+    {
+      "question": "Who do I call for NCN webmail support?",
+      "answer": "Tech Support is available Monday through Friday, 7:00 a.m. to 8:00 p.m., at 800.249.5251 or 712.776.2222. Office staff in Havelock, Iowa can assist during business hours."
+    }
+  ],
+  "domainServices": [
+    "Secure SurgeWeb authentication for Northwest Communications hosted email",
+    "Browser-based inbox, compose, folders, contacts, and calendar where enabled",
+    "Self-service guidance and Tech Support contact paths for login and password help"
+  ]
+}

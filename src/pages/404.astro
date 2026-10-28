@@ -1,0 +1,15 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { SITE_DISPLAY_NAME, SITE_HOMEPAGE_CANONICAL } from "../lib/site-config.js";
+---
+
+<Layout useSiteTitle robots="noindex, nofollow" bodyClass="body_bg">
+  <main style="max-width:32rem;margin:4rem auto;padding:1rem;text-align:center;">
+    <h1>Page not found</h1>
+    <p>
+      The page you requested is not available. Return to the {SITE_DISPLAY_NAME}
+      login.
+    </p>
+    <p><a href={SITE_HOMEPAGE_CANONICAL}>Back to sign in</a></p>
+  </main>
+</Layout>

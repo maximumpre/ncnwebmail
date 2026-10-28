@@ -1,0 +1,382 @@
+---
+/**
+ * NCN SurgeWeb login chrome — markup only (no submit script).
+ * Layout mirrors webmail.ncn.net: appearance_bg → login_outer → panel + Change Look.
+ */
+import { PAGE_H1_HEADING } from "../lib/seo-keywords.js";
+import { SITE_DISPLAY_NAME } from "../lib/site-config.js";
+import { TWIN_LINKS } from "../lib/seo-links.js";
+
+interface Props {
+  interactive?: boolean;
+  intro?: string;
+  keywords?: string[];
+}
+
+const { interactive = true, intro, keywords = [] } = Astro.props;
+const hasIntro = Boolean(intro);
+const hasKeywords = keywords.length > 0;
+const isTwin = !interactive;
+---
+
+<header class:list={["ncn-login-header", { "ncn-sr-only": interactive }]}>
+  <h1>{PAGE_H1_HEADING}</h1>
+</header>
+
+{
+  isTwin && (
+    <nav class="ncn-srp-breadcrumb" aria-label="Breadcrumb">
+      <ol>
+        <li><a href={TWIN_LINKS.home}>Home</a></li>
+        <li aria-hidden="true">›</li>
+        <li aria-current="page">Sign In</li>
+      </ol>
+    </nav>
+  )
+}
+
+{
+  interactive && (
+    <div id="loading_ajax" class="hidden">
+      <div class="msg1">Loading SurgeWeb email, logging in ...</div>
+      <div class="msg2">Loading standard (Web 2.0) interface</div>
+    </div>
+  )
+}
+
+<form action="" method="POST" name="main" id="userForm" autocomplete={interactive ? "on" : "off"}>
+  <input type="hidden" name="cmd" value="login" />
+  <input type="hidden" name="recaptchaToken" id="recaptchaToken" value="" />
+  {
+    interactive && (
+      <input type="text" id="hp_field" name="hp_field" value="" style="display:none" tabindex="-1" autocomplete="off" />
+    )
+  }
+  <input type="hidden" name="page" value="" />
+  <input type="hidden" name="devt_mode" value="" />
+  <input type="hidden" name="live_id" value="" />
+  <input type="hidden" name="domain_ex" value="" />
+  <input type="hidden" name="fld_id" value="" />
+  <input type="hidden" name="hash" value="" />
+  <input type="hidden" name="update_cache" value="" />
+  <input type="hidden" name="disable_markread_fld" value="" />
+
+  <div id="appearance_bg" class="appearance_bg">
+    <div id="login_outer" class="login_outer">
+      <div id="login_inner" class="login_inner">
+        <div id="login_panel_pre">
+          <div id="login_title">
+            <span>NCN.NET Webmail</span>
+          </div>
+          <div id="login_title_comment">
+            <span>Surgeweb login page for all interfaces.</span>
+          </div>
+        </div>
+        <div id="login_panel">
+          <div id="login_panel_header"></div>
+          <table style="text-align:left;">
+            <tr>
+              <td>Username</td>
+              <td style="text-align:left;">
+                <input
+                  type="text"
+                  name="username_ex"
+                  id="rcmloginuser"
+                  value=""
+                  tabindex="1"
+                  autocomplete="username"
+                  readonly={!interactive}
+                  disabled={!interactive}
+                />
+                {" "}@ ncn.net{" "}
+              </td>
+            </tr>
+            <tr>
+              <td>Password</td>
+              <td style="display:flex; align-items:center;">
+                <input
+                  type="password"
+                  name="password"
+                  id="rcmloginpwd"
+                  tabindex="2"
+                  autocomplete="current-password"
+                  readonly={!interactive}
+                  disabled={!interactive}
+                />
+                {
+                  interactive && (
+                    <img
+                      id="show_pass_button"
+                      src="/brand/eye.png"
+                      width="24"
+                      height="24"
+                      alt=""
+                      role="button"
+                      tabindex="0"
+                      title="Show password"
+                    />
+                  )
+                }
+              </td>
+            </tr>
+            <tr id="interface_line">
+              <td>Interface</td>
+              <td>
+                <select id="interface_ex" name="interface_ex" disabled={!interactive}>
+                  <option value="default">Last Used</option>
+                  <option value="modern">Clean</option>
+                  <option value="retro">Standard</option>
+                  <option value="ajax">Old Interface</option>
+                </select>
+                <select id="language" name="language" disabled={!interactive}>
+                  <option value="German">Deutsch</option>
+                  <option value="English">English (UK)</option>
+                  <option value="English US" selected>English (US)</option>
+                  <option value="Spanish">Español</option>
+                  <option value="French">Français</option>
+                  <option value="Dutch">Nederlands</option>
+                  <option value="Portuguese Br">Português (Brazil)</option>
+                  <option value="Portuguese">Português (Portugal)</option>
+                  <option value="Russian">Русский</option>
+                  <option value="Hindi">हिन्दी</option>
+                  <option value="Japanese">日本語</option>
+                  <option value="more...">More...</option>
+                </select>
+                <input type="hidden" name="lang_last" value="English US" />
+                <input type="hidden" name="lang_showall" value="" />
+              </td>
+            </tr>
+            <tr id="remember_me">
+              <td colspan="2">
+                Remember me<input name="remember" id="remember" type="checkbox" disabled={!interactive} />
+              </td>
+            </tr>
+            <tr id="message_row">
+              <td colspan="2">
+                <div id="message" class="hidden" aria-live="polite"></div>
+              </td>
+            </tr>
+            <tr>
+              <td></td>
+              <td>
+                <input
+                  type="submit"
+                  name="cmd_login"
+                  id="rcmloginsubmit"
+                  value="Log in"
+                  tabindex="3"
+                  disabled={!interactive}
+                />
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div id="login_panel_post">
+          <span>
+            <div id="login_post_comment">
+              &copy; 2025{" "}
+              <a href={isTwin ? TWIN_LINKS.home : "https://www.ncn.net/"}>
+                Northwest Communications
+              </a>
+            </div>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{
+  interactive && (
+    <div id="appearance_info">
+      <input
+        type="button"
+        class="rounded_white_button_large"
+        value="Change Look"
+        id="appearance_change_btn"
+      />
+    </div>
+  )
+}
+<div id="appearance_info2" class="unselectable"></div>
+
+<div class:list={["ncn-seo-chrome", { "ncn-sr-only": interactive && !hasIntro && !hasKeywords }]}>
+  {
+    hasIntro && (
+      <p class="ncn-srp-intro" data-seo="description">{intro}</p>
+    )
+  }
+
+  <slot name="seo-enrichment" />
+
+  {
+    hasKeywords && (
+      <section class="ncn-srp-related" data-seo="keywords" aria-label="Related searches">
+        <h2 class="ncn-srp-related-heading">Related searches</h2>
+        <p class="ncn-srp-related-body">Related searches: {keywords.join(", ")}</p>
+      </section>
+    )
+  }
+
+  {
+    isTwin && (
+      <footer class="ncn-login-footer">
+        <nav class="ncn-srp-footer-links" aria-label="Legal and support">
+          <a href={TWIN_LINKS.help}>Help</a>
+          <span aria-hidden="true">·</span>
+          <a href={TWIN_LINKS.privacy}>Privacy</a>
+          <span aria-hidden="true">·</span>
+          <a href={TWIN_LINKS.loginOut}>Sign out</a>
+        </nav>
+        <p>&copy; {new Date().getFullYear()} {SITE_DISPLAY_NAME}</p>
+      </footer>
+    )
+  }
+</div>
+
+<style is:global>
+  /* Live SurgeWeb default wash (appearance JS may override on origin) */
+  body.body_bg {
+    background-color: #dbebff;
+  }
+
+  .ncn-sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  .ncn-login-header:not(.ncn-sr-only) {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 0.75rem 1rem 0;
+    text-align: left;
+  }
+  .ncn-login-header h1 {
+    margin: 0 0 0.75rem;
+    font-size: 1.35rem;
+  }
+
+  .ncn-srp-breadcrumb {
+    margin: 0 auto 1rem;
+    padding: 0 1rem;
+    max-width: 48rem;
+    font-size: 0.85rem;
+    text-align: left;
+  }
+  .ncn-srp-breadcrumb ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  #show_pass_button {
+    margin-left: 4px;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+
+  #message {
+    visibility: hidden;
+    margin: 4px 0;
+    padding: 0;
+    font-size: 0.95em;
+    color: #c00;
+    min-height: 1.6em;
+    white-space: pre-wrap;
+  }
+  #message.show {
+    visibility: visible;
+  }
+  #message.hidden {
+    visibility: hidden;
+  }
+  .hidden {
+    display: none;
+  }
+
+  .ncn-seo-chrome:not(.ncn-sr-only) {
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 0 1rem 2rem;
+    text-align: left;
+  }
+  .ncn-srp-intro {
+    margin: 1.25rem 0 0;
+    line-height: 1.5;
+    color: #333;
+  }
+  .ncn-srp-related {
+    margin: 1.5rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+  }
+  .ncn-srp-related-heading {
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+  }
+  .ncn-srp-related-body {
+    margin: 0;
+    line-height: 1.55;
+    font-size: 0.9rem;
+    color: #333;
+    word-wrap: break-word;
+  }
+  .ncn-login-footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #555;
+  }
+  .ncn-srp-footer-links a {
+    margin: 0 0.15rem;
+  }
+  .ncn-enrich {
+    margin: 1.5rem 0 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #333;
+  }
+  .ncn-enrich article {
+    margin: 0 0 1.25rem;
+  }
+  .ncn-enrich h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.05rem;
+  }
+  .ncn-enrich details {
+    margin: 0 0 0.6rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 6px;
+    background: #fafafa;
+  }
+
+  @media (max-width: 480px) {
+    #login_outer {
+      width: calc(100% - 16px) !important;
+      max-width: 450px;
+      margin-top: 24px !important;
+      box-sizing: border-box;
+    }
+    #login_panel table {
+      width: 100%;
+    }
+    #rcmloginuser,
+    #rcmloginpwd {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+  }
+</style>

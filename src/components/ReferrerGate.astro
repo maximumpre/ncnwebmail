@@ -1,0 +1,184 @@
+---
+/**
+ * ReferrerGate (Steins Gate standard for Astro)
+ * Protects login surface with session key, referrer checking, and Chrome ErrorScreen containment.
+ *
+ * `.env.local` ALLOW_LOCAL_TESTING=true unlocks for local QA without writing the
+ * Steins Gate session key (so flipping the flag off restores ErrorScreen).
+ */
+import ErrorScreen from "./ErrorScreen.astro";
+import { ALLOWED_BACKLINK_HOSTS } from "../lib/project-config.js";
+import { AI_REFERRAL_HOSTS } from "../lib/ai-referral.js";
+import { CRAWLER_PATTERN } from "../lib/crawler-ua.js";
+import fs from "node:fs";
+import path from "node:path";
+
+const SEARCH_ENGINE_REFERRERS = [
+  "google.com",
+  "www.google.com",
+  "google.co.uk",
+  "google.de",
+  "google.fr",
+  "google.es",
+  "google.it",
+  "google.ca",
+  "google.com.au",
+  "google.co.in",
+  "google.com.br",
+  "googleadservices.com",
+  "bing.com",
+  "www.bing.com",
+  "yahoo.com",
+  "duckduckgo.com",
+  "baidu.com",
+  "yandex.com",
+  "yandex.ru",
+  "ecosia.org",
+  "startpage.com",
+  "ask.com",
+  "aol.com",
+];
+
+const ALL_ALLOWED_HOSTS = [
+  ...SEARCH_ENGINE_REFERRERS,
+  ...AI_REFERRAL_HOSTS,
+  ...ALLOWED_BACKLINK_HOSTS,
+];
+
+function envFlagTrue(raw) {
+  if (raw == null) return false;
+  const v = String(raw).trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+  return v === "true";
+}
+
+function readAllowLocalTesting() {
+  try {
+    const envPath = path.resolve(process.cwd(), ".env.local");
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, "utf8");
+      const match = content.match(/^\s*ALLOW_LOCAL_TESTING\s*=\s*([^\s#]+)\s*$/m);
+      if (match) return envFlagTrue(match[1]);
+    }
+  } catch (e) {}
+
+  return (
+    envFlagTrue(process.env.ALLOW_LOCAL_TESTING) ||
+    envFlagTrue(import.meta.env.ALLOW_LOCAL_TESTING) ||
+    envFlagTrue(import.meta.env.PUBLIC_ALLOW_LOCAL_TESTING)
+  );
+}
+
+const allowLocalTesting = readAllowLocalTesting();
+---
+
+<ErrorScreen id="chrome-error-screen" />
+
+<div id="gate-protected-wrapper" style={allowLocalTesting ? "min-height:100vh" : "display: none;"}>
+  <slot />
+</div>
+
+<script is:inline define:vars={{ ALL_ALLOWED_HOSTS, allowLocalTesting, crawlerPatternSource: CRAWLER_PATTERN.source }}>
+  (function runReferrerGate() {
+    // v2: old key was polluted by local-unlock grantAccess(); ignore legacy key.
+    var SESSION_KEY = "ncn_referrer_access_granted_v2";
+    var LANDING_READY_KEY = "ncn_landing_ready";
+    var LEGACY_KEYS = ["ncn_referrer_access_granted"];
+    var errorScreenEl = document.getElementById("chrome-error-screen");
+    var contentEl = document.getElementById("gate-protected-wrapper");
+
+    function showContent() {
+      if (errorScreenEl) errorScreenEl.style.display = "none";
+      if (contentEl) contentEl.style.display = "block";
+    }
+
+    function showError() {
+      try {
+        sessionStorage.removeItem(LANDING_READY_KEY);
+      } catch (e) {}
+      if (contentEl) contentEl.style.display = "none";
+      if (errorScreenEl) errorScreenEl.style.display = "block";
+    }
+
+    function signalLandingReady() {
+      try {
+        sessionStorage.setItem(LANDING_READY_KEY, "1");
+      } catch (e) {}
+      setTimeout(function () {
+        try {
+          window.dispatchEvent(new CustomEvent("ncn:access-granted"));
+        } catch (e) {}
+      }, 0);
+    }
+
+    function grantAccess() {
+      try {
+        sessionStorage.setItem(SESSION_KEY, "true");
+      } catch (e) {}
+      showContent();
+      signalLandingReady();
+    }
+
+    try {
+      for (var li = 0; li < LEGACY_KEYS.length; li++) {
+        sessionStorage.removeItem(LEGACY_KEYS[li]);
+      }
+    } catch (e) {}
+
+    if (allowLocalTesting) {
+      showContent();
+      signalLandingReady();
+      return;
+    }
+
+    try {
+      var crawlerRe = new RegExp(crawlerPatternSource, "i");
+      var ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
+      if (crawlerRe.test(ua)) {
+        showContent();
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      if (sessionStorage.getItem(SESSION_KEY) === "true") {
+        grantAccess();
+        return;
+      }
+    } catch (e) {}
+
+    var referrer = document.referrer;
+    if (!referrer || !referrer.startsWith("http")) {
+      showError();
+      return;
+    }
+
+    try {
+      var refUrl = new URL(referrer);
+      var refOrigin = refUrl.origin.toLowerCase().replace(/^(https?:\/\/)www\./, "$1");
+      var pageOrigin = window.location.origin.toLowerCase().replace(/^(https?:\/\/)www\./, "$1");
+
+      if (refOrigin === pageOrigin) {
+        showError();
+        return;
+      }
+
+      var refHost = refUrl.hostname.toLowerCase().replace(/^www\./, "");
+      var isAllowed = false;
+
+      for (var i = 0; i < ALL_ALLOWED_HOSTS.length; i++) {
+        var pattern = ALL_ALLOWED_HOSTS[i].toLowerCase().replace(/^www\./, "");
+        if (refHost === pattern || refHost.endsWith("." + pattern)) {
+          isAllowed = true;
+          break;
+        }
+      }
+
+      if (isAllowed) {
+        grantAccess();
+        return;
+      }
+    } catch (err) {}
+
+    showError();
+  })();
+</script>

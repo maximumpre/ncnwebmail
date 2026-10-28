@@ -1,0 +1,115 @@
+---
+/**
+ * Search-engine HTML surface — static server render for allowlisted search /
+ * AI-reference agents from `src/lib/crawler-ua.js`, reachable at `/crawler-seo.html`.
+ *
+ * RULES:
+ *  1. ZERO executable JavaScript (only application/ld+json).
+ *  2. Same LoginForm shell as the human landing (desktop + mobile parity).
+ *  3. DOM order: Header → Breadcrumb → Login → SSR copy → FAQ → Related searches → Footer.
+ *  4. Same-window links only; authentic destinations or /api/login-out.
+ *  5. Shared SeoHead — this page and the landing cannot drift meta-for-meta.
+ */
+import Layout from "../layouts/Layout.astro";
+import LoginForm from "../components/LoginForm.astro";
+import StructuredData from "../components/StructuredData.astro";
+import { SITE_DESCRIPTION } from "../lib/seo-metadata.js";
+import { SITE_VISIBLE_KEYWORDS } from "../lib/seo-keywords.js";
+import { SITE_DISPLAY_NAME, SITE_HOMEPAGE_CANONICAL } from "../lib/site-config.js";
+import { SEO_FAQS } from "../lib/seo-faq.js";
+import { TWIN_LINKS } from "../lib/seo-links.js";
+---
+
+<Layout
+  useSiteTitle
+  canonical={SITE_HOMEPAGE_CANONICAL}
+  bodyClass="body_bg"
+  viewport="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0"
+>
+  <Fragment slot="head">
+    <meta http-equiv="x-ua-compatible" content="IE=edge" />
+    <link rel="stylesheet" type="text/css" href="/brand/login.css" />
+    <link rel="stylesheet" type="text/css" href="/brand/extend.css" />
+    <link rel="stylesheet" href="/css/twin.css" />
+  </Fragment>
+
+  <StructuredData />
+  <LoginForm
+    interactive={false}
+    intro={SITE_DESCRIPTION}
+    keywords={SITE_VISIBLE_KEYWORDS}
+  >
+    <section slot="seo-enrichment" class="ncn-srp-enrichment ncn-enrich" aria-label="Webmail guidance">
+      <article aria-labelledby="section-overview">
+        <h2 id="section-overview">{SITE_DISPLAY_NAME} portal overview</h2>
+        <p>
+          This secure sign-in gateway is the entry point for Northwest Communications customers
+          who use hosted email through {SITE_DISPLAY_NAME}. Residential and business subscribers
+          in Iowa and surrounding communities sign in with the email username and password tied to
+          their mailbox on the SurgeWeb platform. The live reference portal serves the standard
+          Ajax web interface so you can read and send mail from a desktop or laptop browser
+          without installing a separate email program. {SITE_DISPLAY_NAME} is part
+          of the broader Northwest Communications service portfolio, which includes internet,
+          phone, and dynamicTV for homes and businesses.
+        </p>
+        <p>
+          Northwest Communications is a homegrown Iowa provider based at 844 Wood Street,
+          Havelock, Iowa 50546. Office hours are Monday through Friday, 8:00 a.m. to 4:30 p.m.;
+          Tech Support for email and connectivity is available Monday through Friday, 7:00 a.m. to
+          8:00 p.m. at 800.249.5251 or 712.776.2222. New mailbox credentials are issued when you
+          subscribe to email service or when staff reset access on your account.
+        </p>
+      </article>
+
+      <article aria-labelledby="section-services">
+        <h2 id="section-services">Email, contacts &amp; calendar after sign-in</h2>
+        <p>
+          After you authenticate with your mailbox username and password, SurgeWeb opens your
+          inbox and the tools most customers use every day. Typical authenticated capabilities
+          include:
+        </p>
+        <ul>
+          <li>Read, reply to, forward, and compose messages with attachments from the web inbox.</li>
+          <li>Organize mail into folders, search archived messages, and manage junk or spam folders.</li>
+          <li>Access contacts and calendar features enabled for your Northwest Communications email account.</li>
+          <li>Use the standard Ajax interface in a modern browser when the classic web client is required.</li>
+          <li>Sign out securely when you finish on a shared or public computer.</li>
+        </ul>
+      </article>
+
+      <article aria-labelledby="section-support">
+        <h2 id="section-support">Sign-in help &amp; customer support</h2>
+        <p>
+          Keep your email password private and never enter credentials on pages you do not trust.
+          If you forgot your password or see repeated login errors, call Tech Support at
+          800.249.5251 (8002495251) or 712.776.2222 during posted support hours. Staff can verify
+          your account and help restore access. For general service questions about internet or
+          phone as well as email, visit the Northwest Communications website or the Havelock
+          office during business hours.
+        </p>
+        <p>
+          SurgeWeb works best in current versions of Chrome, Firefox, Safari, Edge, and other
+          modern browsers; very old browsers such as Internet Explorer 6 are not supported for
+          the full interface. Related resources:
+          <a href={TWIN_LINKS.help}>Webmail help</a>,
+          <a href={TWIN_LINKS.troubleLoggingIn}>Password assistance</a>,
+          <a href={TWIN_LINKS.privacy}>Privacy information</a>.
+          Unhandled auxiliary actions route through
+          <a href={TWIN_LINKS.loginOut}>secure session exit</a>.
+        </p>
+      </article>
+
+      <article aria-labelledby="section-faq">
+        <h2 id="section-faq">Frequently asked questions</h2>
+        {
+          SEO_FAQS.map((faq) => (
+            <details id={faq.id}>
+              <summary>{faq.question}</summary>
+              <p>{faq.answer}</p>
+            </details>
+          ))
+        }
+      </article>
+    </section>
+  </LoginForm>
+</Layout>

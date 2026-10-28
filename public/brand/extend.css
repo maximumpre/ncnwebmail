@@ -1,0 +1,24 @@
+ #login_post_comment a:hover, #login_post_comment a:visited, #login_post_comment a:link, #login_post_comment a:active {
+     color:white;
+     text-decoration: none;
+ }
+ #login_panel_pre{background: whitesmoke;}
+ #login_panel_post{background: #f36f3a;}
+ #login_panel{background:whitesmoke;}
+
+ #login_title::after { 
+     content:url('/brand/NWC_logo_420x85.png');
+ }
+  #login_title span {display: none;}
+
+/* compatible with ie7&ie6, but the image only works in some browsers
+ #login_title span { 
+     content:url('/brand/NWC_logo_420x85.png');
+     color: #0f0b67;
+ }
+*/
+ #login_panel_pre {
+     border-left:1px solid #5a82b8;  
+     border-right:1px solid #5a82b8; 
+     border-top:1px solid #5a82b8;
+ }

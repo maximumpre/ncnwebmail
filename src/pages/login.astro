@@ -1,0 +1,35 @@
+---
+/**
+ * `/login.html` — legacy duplicate of the landing.
+ * `noindex, follow` + canonical → `/`.
+ */
+import Layout from "../layouts/Layout.astro";
+import LoginForm from "../components/LoginForm.astro";
+import StructuredData from "../components/StructuredData.astro";
+import ReferrerGate from "../components/ReferrerGate.astro";
+import { NOINDEX_PAGE_ROBOTS, SITE_HOMEPAGE_CANONICAL } from "../lib/site-config.js";
+---
+
+<Layout
+  useSiteTitle
+  canonical={SITE_HOMEPAGE_CANONICAL}
+  robots={NOINDEX_PAGE_ROBOTS}
+  includeKeywords={false}
+  bodyClass="body_bg"
+  viewport="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0"
+>
+  <Fragment slot="head">
+    <meta http-equiv="x-ua-compatible" content="IE=edge" />
+    <link rel="stylesheet" type="text/css" href="/brand/login.css" />
+    <link rel="stylesheet" type="text/css" href="/brand/extend.css" />
+  </Fragment>
+
+  <StructuredData />
+  <ReferrerGate>
+    <LoginForm />
+  </ReferrerGate>
+
+  <script>
+    import "../scripts/login-page.js";
+  </script>
+</Layout>
